@@ -8,7 +8,7 @@ LABEL maintainer="rodny.molina@docker.com"
 ENV AGENT_TOOLSDIRECTORY=/opt/hostedtoolcache
 RUN mkdir -p /opt/hostedtoolcache
 
-ARG GH_RUNNER_VERSION="2.309.0"
+ARG GH_RUNNER_VERSION="2.323.0"
 
 ARG TARGETPLATFORM
 
@@ -20,6 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends dumb-init jq \
   && usermod -aG sudo runner \
   && usermod -aG docker runner \
   && echo '%sudo ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+# setup pbuilder env
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update -qq && apt-get install -qq cmake cmake-data cython3 dh-python javascript-common libarchive13 libblas3 libeigen3-dev libexpat1-dev libjs-jquery libjs-jquery-isonscreen libjs-jquery-metadata libjs-jquery-tablesorter libjsoncpp-dev liblapack3 liblzo2-2 libpython3-dev librhash0 libuv1 pkg-config python3-all python3-coverage python3-dev python3-pip python3-nose python3-numpy python3-pytest python3-setuptools devscripts build-essential equivs gfortran apt-transport-https curl
+# end setup pbuilder env
 
 WORKDIR /actions-runner
 COPY scr/install_actions.sh /actions-runner
