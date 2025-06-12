@@ -45,7 +45,7 @@ function create_sysbox_gha_runner_repo {
             -e RUNNER_TOKEN="$token" \
             -e RUNNER_NAME="$name" \
             -e RUNNER_GROUP="" \
-            -e LABELS="" \
+            -e LABELS="$name" \
             --name "$name" gha-sysbox-runner-custom:latest
     else
         echo "Fatal error: unsupported runtime $runtime"
@@ -73,7 +73,7 @@ function create_sysbox_gha_runner_org {
             -e ACCESS_TOKEN="$pat" \
             -e RUNNER_NAME="$name" \
             -e RUNNER_GROUP="" \
-            -e LABELS="" \
+            -e LABELS="$name" \
             --name "$name" gha-sysbox-runner-custom:latest
     elif [ "$runtime" = "sysbox" ]; then
         echo "using sysbox runtime"
@@ -86,7 +86,7 @@ function create_sysbox_gha_runner_org {
             -e ACCESS_TOKEN="$pat" \
             -e RUNNER_NAME="$name" \
             -e RUNNER_GROUP="" \
-            -e LABELS="" \
+            -e LABELS="$name" \
             --name "$name" gha-sysbox-runner-custom:latest
     else
         echo "Fatal error: unsupported runtime $runtime"
