@@ -19,10 +19,11 @@ function create_sysbox_gha_runner_repo {
     name=$1
     org=$2
     repo=$3
-    runtime=$4
-    token=$5
+    runner_group=$4
+    runtime=$5
+    token=$6
 
-    echo "Creating repo runner for name=$name org=$org repo=$repo runtime=$runtime token=$token"
+    echo "Creating repo runner for name=$name org=$org repo=$repo runner_group=$runner_group runtime=$runtime token=$token"
 
 
     if [ "$runtime" = "runc" ]; then
@@ -33,7 +34,7 @@ function create_sysbox_gha_runner_repo {
             -e REPO_URL="https://github.com/${org}/${repo}" \
             -e RUNNER_TOKEN="$token" \
             -e RUNNER_NAME="$name" \
-            -e RUNNER_GROUP="" \
+            -e RUNNER_GROUP="$runner_group" \
             -e LABELS="$name" \
             --name "$name" gha-sysbox-runner-custom:latest
     elif [ "$runtime" = "sysbox" ]; then
@@ -44,7 +45,7 @@ function create_sysbox_gha_runner_repo {
             -e REPO_URL="https://github.com/${org}/${repo}" \
             -e RUNNER_TOKEN="$token" \
             -e RUNNER_NAME="$name" \
-            -e RUNNER_GROUP="" \
+            -e RUNNER_GROUP="$runner_group" \
             -e LABELS="$name" \
             --name "$name" gha-sysbox-runner-custom:latest
     else
@@ -56,10 +57,11 @@ function create_sysbox_gha_runner_repo {
 function create_sysbox_gha_runner_org {
     name=$1
     org=$2
-    runtime=$3
-    pat=$4
+    runner_group=$3
+    runtime=$4
+    pat=$5
 
-    echo "Creating org runner for name=$name org=$org runtime=$runtime pat=$pat"
+    echo "Creating org runner for name=$name org=$org runner_group=$runner_group runtime=$runtime pat=$pat"
 
 
     if [ "$runtime" = "runc" ]; then
@@ -72,7 +74,7 @@ function create_sysbox_gha_runner_org {
             -e ORG_NAME="$org" \
             -e ACCESS_TOKEN="$pat" \
             -e RUNNER_NAME="$name" \
-            -e RUNNER_GROUP="" \
+            -e RUNNER_GROUP="$runner_group" \
             -e LABELS="$name" \
             --name "$name" gha-sysbox-runner-custom:latest
     elif [ "$runtime" = "sysbox" ]; then
@@ -85,7 +87,7 @@ function create_sysbox_gha_runner_org {
             -e ORG_NAME="$org" \
             -e ACCESS_TOKEN="$pat" \
             -e RUNNER_NAME="$name" \
-            -e RUNNER_GROUP="" \
+            -e RUNNER_GROUP="$runner_group" \
             -e LABELS="$name" \
             --name "$name" gha-sysbox-runner-custom:latest
     else
@@ -95,18 +97,19 @@ function create_sysbox_gha_runner_org {
 
 # Function to display help message
 show_help() {
-    echo "Usage: $0 <type> [additional arguments]"
+    echo "Usage: $0 <type> <arguments for <type>...>"
     echo
-    echo "<type>:"
-    echo "  repo     Requires name org repo <sysbox|runc> token"
-    echo "  org      Requires name org <sysbox|runc> [pat]"
-    echo "           If pat is not provided, attempt to read it from github.pat file" 
+    echo "where <type>:"
+    echo "  repo     Requires name org repo runner_group <sysbox|runc> token"
+    echo "  org      Requires name org runner_group <sysbox|runc> [pat]"
+    echo "           If pat is not provided, attempt to read it from github.pat file"
     echo
-    echo "Arguments:"
-    echo "  name     Runner name"
-    echo "  org      Organization name"
-    echo "  repo     Repository name"
-    echo "  pat      Personal access token with read/write access to self-hosted runners"
+    echo "and <arguments for <type>...>:"
+    echo "  name            Runner name"
+    echo "  org             Organization name"
+    echo "  repo            Repository name"
+    echo "  runner_group    Runner group on github (ex: \"\", \"lirmm_private\")"
+    echo "  pat             Personal access token with read/write access to self-hosted runners"
 
     echo "Flags:"
     echo "  -h, --help   Show this help message and exit"
@@ -128,13 +131,13 @@ function main() {
 
     # Check the first argument type and validate argument count
     if [ "$1" == "org" ]; then
-        if [ $# -lt 4 ]; then
+        if [ $# -lt 5 ]; then
             echo "Invalid arguments provided"
             show_help
             exit 1
         fi
-                
-        if [ $# -lt 5 ]; then
+
+        if [ $# -lt 6 ]; then
             if [ -f "github.pat" ]; then
                 PAT_VALUE=$(cat github.pat)
                 echo "Using token from github.pat"
@@ -143,21 +146,21 @@ function main() {
                 show_help
                 exit 1
             fi
-        elif [ $# -eq 5 ]; then
-            PAT_VALUE=$5
+        elif [ $# -eq 6 ]; then
+            PAT_VALUE=$6
         else
             echo "Invalid arguments provided"
             show_help
             exit 1
         fi
-        create_sysbox_gha_runner_org $2 $3 $4 $PAT_VALUE
+        create_sysbox_gha_runner_org $2 $3 $4 $5 $PAT_VALUE
     elif [ "$1" == "repo" ]; then
-        if [ $# -ne 6 ]; then
+        if [ $# -ne 7 ]; then
             echo "Error: invalid arguments provided. $#"
             show_help
             exit 1
         else
-            create_sysbox_gha_runner_repo $2 $3 $4 $5 $6
+            create_sysbox_gha_runner_repo $2 $3 $4 $5 $6 $7
         fi
     else
         echo "Invalid arguments provided"
