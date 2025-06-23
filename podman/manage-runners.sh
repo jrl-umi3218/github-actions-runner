@@ -48,10 +48,10 @@ load_config() {
     fi
 }
 
-# Build the Docker image
+# Build the Podman image
 build_image() {
     log_info "Building GitHub runner image..."
-    docker build -t "$IMAGE_NAME" "$SCRIPT_DIR"
+    podman build -t "$IMAGE_NAME" "$SCRIPT_DIR"
     log_info "Image built successfully"
 }
 
@@ -71,9 +71,9 @@ create_runner() {
     
     log_info "Creating runner: $runner_name"
     
-    docker run -d \
+    podman run -d \
         --name "$runner_name" \
-        --restart unless-stopped \
+        --restart=unless-stopped \
         --cpus="$cpus" \
         --memory="$memory" \
         -e ORG_URL="$ORG_URL" \
@@ -95,19 +95,19 @@ remove_runner() {
     log_info "Removing runner: $runner_name"
     
     # Stop the container gracefully (this should trigger cleanup)
-    docker stop "$runner_name" 2>/dev/null || true
+    podman stop "$runner_name" 2>/dev/null || true
     
     # Wait a bit for cleanup
     sleep 5
     
     # Remove the container
-    docker rm "$runner_name" 2>/dev/null || true
+    podman rm "$runner_name" 2>/dev/null || true
     
     # Optionally remove volumes
     read -p "Remove associated volumes? (y/N): " remove_volumes
     if [[ $remove_volumes =~ ^[Yy]$ ]]; then
-        docker volume rm "${runner_name}-work" 2>/dev/null || true
-        docker volume rm "${runner_name}-storage" 2>/dev/null || true
+        podman volume rm "${runner_name}-work" 2>/dev/null || true
+        podman volume rm "${runner_name}-storage" 2>/dev/null || true
         log_info "Volumes removed"
     fi
     
@@ -117,13 +117,13 @@ remove_runner() {
 # List all runners
 list_runners() {
     log_info "GitHub Action Runners:"
-    docker ps -a --filter "ancestor=$IMAGE_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}"
+    podman ps -a --filter "ancestor=$IMAGE_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}"
 }
 
 # Show runner logs
 show_logs() {
     local runner_name="$1"
-    docker logs -f "$runner_name"
+    podman logs -f "$runner_name"
 }
 
 # Scale runners
@@ -139,7 +139,7 @@ scale_runners() {
         local runner_name="${base_name}-$(printf "%02d" $i)"
         
         # Check if runner already exists
-        if docker ps -a --format '{{.Names}}' | grep -q "^${runner_name}$"; then
+        if podman ps -a --format '{{.Names}}' | grep -q "^${runner_name}$"; then
             log_warn "Runner $runner_name already exists, skipping"
             continue
         fi
@@ -169,9 +169,9 @@ health_check() {
     
     local unhealthy_runners=()
     
-    for runner in $(docker ps --filter "ancestor=$IMAGE_NAME" --format '{{.Names}}'); do
+    for runner in $(podman ps --filter "ancestor=$IMAGE_NAME" --format '{{.Names}}'); do
         # Check if runner is responding
-        if ! docker exec "$runner" podman --version >/dev/null 2>&1; then
+        if ! podman exec "$runner" podman --version >/dev/null 2>&1; then
             unhealthy_runners+=("$runner")
         fi
     done
@@ -185,7 +185,7 @@ health_check() {
         if [[ $restart_unhealthy =~ ^[Yy]$ ]]; then
             for runner in "${unhealthy_runners[@]}"; do
                 log_info "Restarting $runner"
-                docker restart "$runner"
+                podman restart "$runner"
             done
         fi
     fi
@@ -270,3 +270,4 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
+
