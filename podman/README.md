@@ -17,10 +17,10 @@ A self-hosted GitHub Actions runner based on Ubuntu 22.04 with complete Podman-i
    cd github-runner-podman
    
    # Build the image
-   docker build -t github-runner-podman .
+   podman build -t github-runner-podman .
    
    # Run organization runner
-   docker run -d \
+   podman run -d \
      --name github-runner-org \
      -e ORG_URL="https://github.com/your-organization" \
      -e RUNNER_TOKEN="your_token_here" \
@@ -28,10 +28,10 @@ A self-hosted GitHub Actions runner based on Ubuntu 22.04 with complete Podman-i
      github-runner-podman
    ```
 
-3. **Or use Docker Compose**:
+3. **Or use Podman Compose**:
    ```bash
-   # Edit docker-compose.yml with your details
-   docker-compose up -d github-runner-org
+   # Edit podman-compose.yml with your details
+   podman-compose up -d github-runner-org
    ```
 
 ## 🔧 Management
@@ -65,7 +65,7 @@ jobs:
     
     - name: Build mc_rtc
       run: |
-        docker run --rm -v $PWD:/workspace \
+        podman run --rm -v $PWD:/workspace \
           ubuntu:22.04 bash -c "
           cd /workspace && 
           apt-get update && 
@@ -76,7 +76,7 @@ jobs:
     
     - name: Safe cleanup
       run: |
-        docker system prune -af --volumes
+        podman system prune -af --volumes
         # Only affects isolated Podman environment!
 ```
 
@@ -85,7 +85,7 @@ jobs:
 - **Complete isolation** - Podman runs rootless, can't affect host
 - **Docker compatibility** - `docker` commands work transparently  
 - **Organization support** - Centralized runner management
-- **Safe cleanup** - `docker system prune -af` is completely safe
+- **Safe cleanup** - `podman system prune -af` is completely safe
 - **No privileged containers** - Enhanced security
 - **Easy scaling** - Add runners with simple commands
 
@@ -95,7 +95,7 @@ jobs:
 github-runner-podman/
 ├── Dockerfile              # Main runner image
 ├── entrypoint.sh           # Runner startup script
-├── docker-compose.yml      # Multi-runner deployment
+├── podman-compose.yml      # Multi-runner deployment
 ├── manage-runners.sh       # Interactive management
 └── README.md              # This file
 ```

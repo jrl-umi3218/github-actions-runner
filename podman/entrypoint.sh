@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+export RUNNER_TOKEN=$(cat /run/secrets/runner_token_secret)
+echo "RUNNER_TOKEN is $RUNNER_TOKEN"
+
 # Function to cleanup on exit
 cleanup() {
     echo "Cleaning up..."
@@ -72,7 +75,8 @@ podman --version
 podman info --format "{{.Host.RemoteSocket}}" || true
 
 # Create Docker alias in current session
-alias docker=podman
+docker() { podman "$@"; }
+export -f docker
 export DOCKER_HOST=""
 
 # Verify Docker alias works
@@ -93,6 +97,7 @@ if [ "$RUNNER_SCOPE" = "organization" ] && [ -n "$RUNNER_GROUP" ]; then
     CONFIG_CMD="$CONFIG_CMD --runnergroup \"${RUNNER_GROUP}\""
 fi
 
+echo "CONFIG_CMD is $CONFIG_CMD"
 # Execute configuration
 eval $CONFIG_CMD
 
