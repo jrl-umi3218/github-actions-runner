@@ -1,6 +1,8 @@
 #!/usr/bin/dumb-init /bin/bash
 # shellcheck shell=bash
 
+set -e
+
 export RUNNER_ALLOW_RUNASROOT=1
 export PATH=${PATH}:/actions-runner
 
@@ -10,6 +12,76 @@ export -n ACCESS_TOKEN
 export -n RUNNER_TOKEN
 export -n APP_ID
 export -n APP_PRIVATE_KEY
+
+# Start Docker daemon only if using the sysbox runtime
+if [[ "$CONTAINER_RUNTIME" == "sysbox" ]]; then
+    echo "Using sysbox runtime. Starting Docker daemon directly..."
+    
+    export DOCKER_BUILDKIT=1
+    export BUILDKIT_HOST_NETWORK_MODE=host
+    
+    # Kill dockerd processes
+    sudo pkill dockerd 2>/dev/null || true
+    
+    # Wait a moment
+    sleep 3
+    
+    # Force kill if still running
+    sudo pkill -9 dockerd 2>/dev/null || true
+    
+    # Remove socket
+    sudo rm -f /var/run/docker.sock
+    
+    # Verify it's stopped
+    if pgrep dockerd >/dev/null; then
+        echo "Warning: dockerd still running"
+        ps aux | grep dockerd
+    else
+        echo "Docker daemon stopped successfully"
+    fi
+
+    sudo mkdir -p /etc/docker
+    echo '{
+      "features": { "buildkit": true }
+    }' | sudo tee /etc/docker/daemon.json >/dev/null
+
+    # Start dockerd with sysbox-compatible settings
+    sudo dockerd \
+        --host=unix:///var/run/docker.sock \
+        --storage-driver=overlay2 \
+        --bridge=none \
+        --iptables=false \
+        --ip-forward=false \
+        --dns=8.8.8.8 &
+
+    # Wait for Docker to be ready
+    echo "Waiting for Docker daemon..."
+    timeout=30
+    count=0
+    while ! docker info >/dev/null 2>&1; do
+        sleep 1
+        count=$((count + 1))
+        if [ $count -ge $timeout ]; then
+            echo "Docker daemon failed to start within ${timeout}s"
+            exit 1
+        fi
+        echo "Still waiting... (${count}/${timeout})"
+    done
+    echo "Docker daemon is ready!"
+
+    # Simple wrapper that always uses host networking for builds
+    docker() {
+        if [[ "$1" == "build" ]]; then
+            command docker build --network=host "${@:2}"
+        else
+            command docker "$@"
+        fi
+    }
+    export -f docker
+    echo "Docker daemon ready with transparent host networking"
+else
+    echo "Regular runtime."
+fi
 
 deregister_runner() {
   echo "Caught SIGTERM. Deregistering runner"

@@ -29,7 +29,7 @@ function create_sysbox_gha_runner_repo {
     if [ "$runtime" = "runc" ]; then
         echo "using runc runtime. prefer using sysbox"
         create_sysbox_gha_runner_image
-        docker run --privileged --runtimme=runc -d --restart=always \
+        docker run --privileged --runtime=runc -d --restart=always \
             -v /var/run/docker.sock:/var/run/docker.sock
             -e REPO_URL="https://github.com/${org}/${repo}" \
             -e RUNNER_TOKEN="$token" \
@@ -76,6 +76,7 @@ function create_sysbox_gha_runner_org {
             -e RUNNER_NAME="$name" \
             -e RUNNER_GROUP="$runner_group" \
             -e LABELS="$name" \
+            -e CONTAINER_RUNTIME="$runtime" \
             --name "$name" gha-sysbox-runner-custom:latest
     elif [ "$runtime" = "sysbox" ]; then
         echo "using sysbox runtime"
@@ -89,6 +90,7 @@ function create_sysbox_gha_runner_org {
             -e RUNNER_NAME="$name" \
             -e RUNNER_GROUP="$runner_group" \
             -e LABELS="$name" \
+            -e CONTAINER_RUNTIME="$runtime" \
             --name "$name" gha-sysbox-runner-custom:latest
     else
         echo "Fatal error: unsupported runtime $runtime"

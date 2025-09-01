@@ -20,7 +20,8 @@ services:
       RUNNER_LABELS: ubuntu-22.04,podman,self-hosted,organization,production
       RUNNER_WORKDIR: _work
       # RUNNER_TOKEN is set using echo "***" | podman secret create runner_token_secret -
-    user: "1000:1000"
+    devices:
+      - /dev/fuse:/dev/fuse
     volumes:
       - org-runner-work:/home/runner/_work
       - org-podman-storage:/home/runner/.local/share/containers
