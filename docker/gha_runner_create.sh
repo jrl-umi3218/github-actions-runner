@@ -28,6 +28,7 @@ function create_sysbox_gha_runner_repo {
 
     if [ "$runtime" = "runc" ]; then
         echo "using runc runtime. prefer using sysbox"
+        docker stop "$name"
         create_sysbox_gha_runner_image
         docker run --privileged --runtime=runc -d --restart=always \
             -v /var/run/docker.sock:/var/run/docker.sock
@@ -39,6 +40,7 @@ function create_sysbox_gha_runner_repo {
             --name "$name" gha-sysbox-runner-custom:latest
     elif [ "$runtime" = "sysbox" ]; then
         # With sysbox (recommended)
+        docker stop "$name"
         create_sysbox_gha_runner_image
         docker run -d --restart=always \
             --runtime=sysbox-runc \
