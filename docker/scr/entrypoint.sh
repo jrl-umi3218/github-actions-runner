@@ -13,76 +13,6 @@ export -n RUNNER_TOKEN
 export -n APP_ID
 export -n APP_PRIVATE_KEY
 
-# Start Docker daemon only if using the sysbox runtime
-if [[ "$CONTAINER_RUNTIME" == "sysbox" ]]; then
-    echo "Using sysbox runtime. Starting Docker daemon directly..."
-    
-    export DOCKER_BUILDKIT=1
-    export BUILDKIT_HOST_NETWORK_MODE=host
-    
-    # Kill dockerd processes
-    sudo pkill dockerd 2>/dev/null || true
-    
-    # Wait a moment
-    sleep 3
-    
-    # Force kill if still running
-    sudo pkill -9 dockerd 2>/dev/null || true
-    
-    # Remove socket
-    sudo rm -f /var/run/docker.sock
-    
-    # Verify it's stopped
-    if pgrep dockerd >/dev/null; then
-        echo "Warning: dockerd still running"
-        ps aux | grep dockerd
-    else
-        echo "Docker daemon stopped successfully"
-    fi
-
-    sudo mkdir -p /etc/docker
-    echo '{
-      "features": { "buildkit": true }
-    }' | sudo tee /etc/docker/daemon.json >/dev/null
-
-    # Start dockerd with sysbox-compatible settings
-    sudo dockerd \
-        --host=unix:///var/run/docker.sock \
-        --storage-driver=overlay2 \
-        --bridge=none \
-        --iptables=false \
-        --ip-forward=false \
-        --dns=8.8.8.8 &
-
-    # Wait for Docker to be ready
-    echo "Waiting for Docker daemon..."
-    timeout=30
-    count=0
-    while ! docker info >/dev/null 2>&1; do
-        sleep 1
-        count=$((count + 1))
-        if [ $count -ge $timeout ]; then
-            echo "Docker daemon failed to start within ${timeout}s"
-            exit 1
-        fi
-        echo "Still waiting... (${count}/${timeout})"
-    done
-    echo "Docker daemon is ready!"
-
-    # Simple wrapper that always uses host networking for builds
-    docker() {
-        if [[ "$1" == "build" ]]; then
-            command docker build --network=host "${@:2}"
-        else
-            command docker "$@"
-        fi
-    }
-    export -f docker
-    echo "Docker daemon ready with transparent host networking"
-else
-    echo "Regular runtime."
-fi
-
 deregister_runner() {
   echo "Caught SIGTERM. Deregistering runner"
   if [[ -n "${ACCESS_TOKEN}" ]]; then
@@ -192,6 +122,9 @@ configure_runner() {
     ARGS+=("--disableupdate")
   fi
 
+  echo "Removing previous runners (if any)"
+  ./config.sh remove --token "${RUNNER_TOKEN}" || echo "No previous runner to remove"
+
   echo "Configuring"
   ./config.sh \
       --url "${_SHORT_URL}" \
@@ -244,6 +177,45 @@ if [[ ${_START_DOCKER_SERVICE} == "true" ]]; then
   echo "Starting docker service"
   _PREFIX=""
   [[ ${_RUN_AS_ROOT} != "true" ]] && _PREFIX="sudo"
+
+  # Start Docker daemon only if using the sysbox runtime
+  if [[ "$CONTAINER_RUNTIME" == "sysbox" ]]; then
+      echo "Using sysbox runtime, configuring dockerd accordingly."
+      export DOCKER_BUILDKIT=1
+      export BUILDKIT_HOST_NETWORK_MODE=host
+
+      sudo mkdir -p /etc/docker
+      # "dns": ["8.8.8.8"]
+      echo '{
+        "features": { "buildkit": true },
+        "storage-driver": "overlay2",
+        "bridge": "none",
+        "iptables": false,
+        "ip-forward": false
+      }' | sudo tee /etc/docker/daemon.json >/dev/null
+
+      # Start dockerd with sysbox-compatible settings
+      # sudo dockerd \
+      #     --host=unix:///var/run/docker.sock \
+      #     --storage-driver=overlay2 \
+      #     --bridge=none \
+      #     --iptables=false \
+      #     --ip-forward=false \
+      #     --dns=8.8.8.8 &
+
+      # Simple wrapper that always uses host networking for builds
+      docker() {
+          if [[ "$1" == "build" ]]; then
+              command docker build --network=host "${@:2}"
+          else
+              command docker "$@"
+          fi
+      }
+      export -f docker
+      echo "Docker alias configured with transparent host networking"
+  fi
+
+  echo "Sterting docker service"
   ${_PREFIX} service docker start
 fi
 
