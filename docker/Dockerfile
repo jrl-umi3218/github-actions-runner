@@ -8,7 +8,7 @@ LABEL maintainer="rodny.molina@docker.com"
 ENV AGENT_TOOLSDIRECTORY=/opt/hostedtoolcache
 RUN mkdir -p /opt/hostedtoolcache
 
-ARG GH_RUNNER_VERSION="2.323.0"
+ARG GH_RUNNER_VERSION="2.328.0"
 
 ARG TARGETPLATFORM
 

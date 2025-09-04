@@ -26,9 +26,12 @@ function create_sysbox_gha_runner_repo {
     echo "Creating repo runner for name=$name org=$org repo=$repo runner_group=$runner_group runtime=$runtime token=$token"
 
 
+    echo "Stopping container $name"
+    docker stop "$name" 2>/dev/null
+    echo "Removing container $name"
+    docker rm "$name" 2>/dev/null
     if [ "$runtime" = "runc" ]; then
         echo "using runc runtime. prefer using sysbox"
-        docker stop "$name"
         create_sysbox_gha_runner_image
         docker run --privileged --runtime=runc -d --restart=always \
             -v /var/run/docker.sock:/var/run/docker.sock
